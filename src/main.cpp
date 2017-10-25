@@ -199,7 +199,6 @@ int main() {
   //start in lane 1
   //Have a reference velocity to target
   double ref_vel = 0.0; // mph
-  //double ref_vel = 49.5; // mph
   int lane = 1;
   
   h.onMessage([&ref_vel, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -247,12 +246,14 @@ int main() {
 				car_s = end_path_s;
 			}
 
+			// Flags
 			bool too_close = false;
 			bool too_close_left = false;
 			bool too_close_right = false;
 			int new_lane = lane;
 			double in_front_car_vel = 0.0;
 
+			// Check each car detect by sensors
 			for( int i = 0; i < sensor_fusion.size(); i++ ){
 				float d= sensor_fusion[i][6];
 				double vx = sensor_fusion[i][3];
@@ -266,20 +267,15 @@ int main() {
 
 					if( (check_car_s > car_s) && ( (check_car_s-car_s) < 30 ) ){
 
-						//ref_vel = 29.5;
-
 						too_close = true;
 						in_front_car_vel = check_speed * 2.23694;
-						cout << check_speed << endl;
-						//if(lane > 0){
-						//	lane = 0;
-						//}
 					}
 
 				}
 
 				//Left first
 				if (lane > 0 && (d < (2 + 4 * (lane-1) + 2) && d > (2 + 4 * (lane-1) - 2))){
+					// Check if car is between the range
 					if( ( check_car_s > car_s && check_car_s-car_s < 30 ) || ( check_car_s < car_s && car_s-check_car_s < 11 ) ){
 						too_close_left = true;
 					}
@@ -289,6 +285,7 @@ int main() {
 				//Right
 				if (lane < 2 && (d < (2 + 4 * (lane + 1) + 2) && d > (2 + 4 * (lane + 1) - 2)))
 				{
+					// Check if car is between the range
 					if ((check_car_s > car_s && check_car_s - car_s < 30) || (check_car_s < car_s && car_s - check_car_s < 11))
 					{
 						too_close_right = true;
@@ -297,7 +294,7 @@ int main() {
 			}
 
 			if( too_close ){
-				
+				// Change lane if possible, otherwise just decrease the speed
 				if( lane > 0 && too_close_left == false ){
 					lane -=1;
 				} else if( lane < 2 && too_close_right == false ){
@@ -349,6 +346,7 @@ int main() {
 				ptsy.push_back(ref_y);
 			}
 
+			// Three points more to generate the spline
 			vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 			vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 			vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
@@ -370,7 +368,7 @@ int main() {
 				ptsx[i] = (shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
 				ptsy[i] = (shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
 			}
-
+			// Generate spline
 			tk::spline s;
 
 			s.set_points(ptsx, ptsy);
@@ -388,7 +386,7 @@ int main() {
 			double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
 
 			double x_add_on = 0;
-
+			// Create final vector of points using the generated spline
 			for(int i =1; i <= 50-previous_path_x.size(); i++){
 				double N = (target_dist/(.02*ref_vel/2.24));
 				double x_point = x_add_on+(target_x)/N;
@@ -409,19 +407,6 @@ int main() {
 				next_x_vals.push_back(x_point);
 				next_y_vals.push_back(y_point);
 			}
-
-
-
-			// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-			/* 
-			double dist_inc = 0.5;
-			for(int i=0; i < 50; i++){
-				double next_s = car_s+(i+1)*dist_inc;
-				double next_d = 6;
-				vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-				next_x_vals.push_back(xy[0]);
-				next_y_vals.push_back(xy[1]);
-			}*/
 
 
           	msgJson["next_x"] = next_x_vals;

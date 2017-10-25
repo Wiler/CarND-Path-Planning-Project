@@ -1,5 +1,25 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
+
+### Model Documentation
+
+#### Path generation:
+ * In order to generate a spline, five key points are set. Two of then are the last two of the previous path, meanwhile the other three points are separated by 30 m.
+ * Set ref_velocity as the maximun velocity to reach just below the speed limit (49.3 mph). Overtaking of maximum acceleration is avoided by increasing ref_velocity by no more than 0.3 per step.
+* Create an array of points depending on the simulator's  configuration using the spline previously mentioned. In this case, a total number of 50 points are generated with a separation of .02*ref_velocity/2.24.
+* Note that Frenet coordinates are used to simplify the mathematical part.
+
+#### Avoid collitions
+
+* In order to stay in the same lane, the value of d is set to 2+4*lane, where lane takes values from 0 to 2, being 0 the most left lane and 2 the most right lane. 
+* Analize data from sensors to detect if any car is in front in the next 30 m. If a car is detected, the ref_velocity is decreased by 0.3 each step until it is the same of the in-front car.
+* When changing lanes, check for cars 30 m in front or 12 m back. If any car is detect inside this range, change-lane action is not set.
+
+#### Changing lanes
+* Change lane if and only if there is a car in the next 30 m.
+* If current lane is the most left lane, change to the right lane if there are no cars between the range previously explained. Likewise, If current lane is the most right lane, change to left lane.
+* Changing to left lane is prefered if the current lane is the central one, therefore the right lane is the second option. This can be improved in future implementations by creating a cost funtion.
+
    
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
